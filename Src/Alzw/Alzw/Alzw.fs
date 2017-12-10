@@ -26,11 +26,27 @@ let encode (bytes : byte []) =
         lookup.Add ([ i ], ByteStringIndexer (int i))
     wordRangeList.Add (Seq.replicate 256 2)
 
-    let coder = RangeCoder (1 <<< rangeCoderPrecision)
+    let coder = RangeCoder (rangeCoderPrecision)
     let mutable blockIndex = 0
 
     let rec advance i =
         if i < bytes.Length then
+            if blockIndex < i / blockSize then
+                let buffer = Array.zeroCreate wordRangeList.Count
+                for KeyValue (word, indexer) in lookup do
+                    buffer.[indexer.Index] <- word, wordRangeList.[indexer.Index], indexer.HasChildren
+                lookup.Clear ()
+                wordRangeList.Clear ()
+                let mutable cumulativeIndex = 0
+                for word, weight, hasChildren in buffer do
+                    if word.Tail.IsEmpty || weight / 2 > 0 || hasChildren then
+                        lookup.Add (word, ByteStringIndexer (cumulativeIndex))
+                        wordRangeList.Add (max 1 (weight / 2))
+                        if not word.Tail.IsEmpty then
+                            lookup.[word.Tail].HasChildren <- true
+                        cumulativeIndex <- cumulativeIndex + 1
+                blockIndex <- blockIndex + 1
+
             let endIndex, word, indexer =
                 let rec findIndexer endIndex word indexer =
                     if endIndex < bytes.Length then
@@ -78,6 +94,7 @@ let decode (bytes : byte []) =
     let bitReader = BitArrayReader (bytes)
     let decoder = RangeDecoder (rangeCoderPrecision)
     let decodedBytes = List ()
+    let mutable blockIndex = 0
 
     let rec advance currCode =
         let stepRangeIndex = stepRangeList.FindScaled decoder.CurrentLow decoder.CurrentHigh currCode
@@ -89,12 +106,28 @@ let decode (bytes : byte []) =
         | 0 -> ()   // EOF
         | 1 -> raise (ArgumentException "Forbidden region") // Forbidden region
         | _ ->  // Alphabet
+            if blockIndex < decodedBytes.Count / blockSize then
+                let parentSet = HashSet (lookup |> Seq.map (fun word ->
+                    match word with
+                    | [] | _ :: [] -> word
+                    | _ :: wordTail -> wordTail))
+                let buffer = Array.zeroCreate lookup.Count
+                for i in 0 .. buffer.Length - 1 do
+                    buffer.[i] <- lookup.[i], wordRangeList.[i]
+                lookup.Clear ()
+                wordRangeList.Clear ()
+                for word, weight in buffer do
+                    if word.Tail.IsEmpty || weight / 2 > 0 || parentSet.Contains word then
+                        lookup.Add word
+                        wordRangeList.Add (max 1 (weight / 2))
+                blockIndex <- blockIndex + 1
+
             let wordRangeIndex = wordRangeList.FindScaled decoder.CurrentLow decoder.CurrentHigh currCode
             let currCode =
                 let bitsPushed = decoder.PushRange wordRangeList wordRangeIndex currCode
                 ((currCode <<< bitsPushed) ||| bitReader.ReadMulti bitsPushed) &&& codeMask
 
-            if decodedBytes.Count >= 0 then
+            if decodedBytes.Count > 0 then
                 lookup.[lookup.Count - 1] <- List.last lookup.[wordRangeIndex] :: lookup.[lookup.Count - 1]
             let word = lookup.[wordRangeIndex]
             decodedBytes.AddRange (Seq.rev word)

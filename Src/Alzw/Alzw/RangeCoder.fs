@@ -53,7 +53,8 @@ type BitArrayReader (bytes : byte []) =
             else read (count - 1) ((acc <<< 1) ||| (if x.Read () then 1 else 0))
         read count 0
 
-type RangeCoder (extent) =
+type RangeCoder (extentPrecision) =
+    let extent = 1 <<< extentPrecision
     let bitList = BitList ()
     let mutable currLo = 0
     let mutable currHi = extent
