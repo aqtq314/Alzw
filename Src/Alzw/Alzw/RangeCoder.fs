@@ -5,7 +5,7 @@ open System.Collections.Generic
 open System.Text
 
 
-type BitList () =
+type internal BitList () =
     let list = List ()
     let mutable currByte = 0uy
     let mutable bitCount = 0
@@ -31,7 +31,7 @@ type BitList () =
         bitCount <- 0
         result
 
-type BitArrayReader (bytes : byte []) =
+type internal BitArrayReader (bytes : byte []) =
     let mutable currPos = 0
 
     member x.BytesCount = bytes.Length
@@ -53,7 +53,7 @@ type BitArrayReader (bytes : byte []) =
             else read (count - 1) ((acc <<< 1) ||| (if x.Read () then 1 else 0))
         read count 0
 
-type RangeCoder (extentPrecision) =
+type internal RangeCoder (extentPrecision) =
     let extent = 1 <<< extentPrecision
     let bitList = BitList ()
     let mutable currLo = 0
@@ -98,7 +98,7 @@ type RangeCoder (extentPrecision) =
         currBitsAcc <- 0
         bitList.Flush ()
 
-type RangeDecoder (extentPrecision) =
+type internal RangeDecoder (extentPrecision) =
     let extent = 1 <<< extentPrecision
     let mutable currLo = 0
     let mutable currHi = extent

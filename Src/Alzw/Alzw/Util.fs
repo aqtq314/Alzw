@@ -1,5 +1,5 @@
 ﻿[<AutoOpen>]
-module Util
+module internal Util
 
 open System
 

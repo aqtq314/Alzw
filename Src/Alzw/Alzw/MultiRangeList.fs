@@ -6,7 +6,7 @@ open System.Text
 
 
 [<Struct>]
-type Range =
+type internal Range =
     val Start : int
     val Length : int
     new (start, length) = { Start = start; Length = length }
@@ -14,7 +14,7 @@ type Range =
     override x.ToString () = sprintf "[%d, %d)" x.Start x.End
     static member ofStartEnd start ``end`` = Range (start, ``end`` - start)
 
-type MultiRangeList () =
+type internal MultiRangeList () =
     let layers = List ()
     do layers.Add (Array.zeroCreate 1)
     let mutable count = 0
