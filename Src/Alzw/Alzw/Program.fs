@@ -6,10 +6,6 @@ open System.Collections.Generic
 open System.Text
 
 
-//let str = @"A quantifier specifies how many instances of the previous element (which can be a character, a group, or a character class) must be present in the input string for a match to occur. Quantifiers include the language elements listed in the following table. For more information, see Quantifiers."
-let str = System.IO.File.ReadAllText @"C:\Users\User\Desktop\bible.50w.txt"
-//let str = System.IO.File.ReadAllText @"C:\Users\User\Desktop\bible.32768.txt"
-
 let [<Literal>] defaultBlockSize = 32768
 let [<Literal>] defaultForbiddenRegion = 30
 
